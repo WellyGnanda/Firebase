@@ -20,6 +20,9 @@ type IUserSvc interface {
 	UpdateUser(ctx context.Context, user userEntity.User) error
 	DeleteByNIP(ctx context.Context, nip string) error
 	SelectUser(ctx context.Context) ([]userEntity.User, error)
+	InsertFirebase(ctx context.Context, user userEntity.User) error
+	PublishFirebase(user userEntity.User) error
+	UpdateByNipFirebase(ctx context.Context, nip string, user userEntity.User) error
 }
 
 type (
@@ -70,11 +73,29 @@ func (h *Handler) UserHandler(w http.ResponseWriter, r *http.Request) {
 
 	case http.MethodPost:
 		json.Unmarshal(body, &user)
-		err = h.userSvc.InsertUser(context.Background(), user)
+
+		if _, x := r.URL.Query()["typePost"]; x {
+			_typePost := r.FormValue("typePost")
+			switch _typePost {
+
+			case "Firebase":
+				err = h.userSvc.InsertFirebase(context.Background(), user)
+
+			case "Sql":
+				err = h.userSvc.InsertUser(context.Background(), user)
+
+			case "Publish":
+				err = h.userSvc.PublishFirebase(user)
+			}
+		}
 
 	case http.MethodPut:
 		json.Unmarshal(body, &user)
-		err = h.userSvc.UpdateUser(context.Background(), user)
+		if _, nipOK := r.URL.Query()["NIP"]; nipOK {
+			err = h.userSvc.UpdateByNipFirebase(context.Background(), r.FormValue("NIP"), user)
+		} else {
+			err = h.userSvc.UpdateUser(context.Background(), user)
+		}
 	case http.MethodDelete:
 		if _, nipOK := r.URL.Query()["NIP"]; nipOK {
 			err = h.userSvc.DeleteByNIP(context.Background(), r.FormValue("NIP"))

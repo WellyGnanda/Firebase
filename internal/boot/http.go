@@ -2,6 +2,7 @@ package boot
 
 import (
 	"go-tutorial-2020/pkg/firebaseclient"
+	"go-tutorial-2020/pkg/kafka"
 	"log"
 	"net/http"
 
@@ -12,6 +13,7 @@ import (
 	userData "go-tutorial-2020/internal/data/user"
 	server "go-tutorial-2020/internal/delivery/http"
 	userHandler "go-tutorial-2020/internal/delivery/http/user"
+	kConsumer "go-tutorial-2020/internal/delivery/kafka"
 	userService "go-tutorial-2020/internal/service/user"
 )
 
@@ -24,6 +26,7 @@ func HTTP() error {
 		us  userService.Service    // User domain service layer
 		uh  *userHandler.Handler   // User domain handler
 		cfg *config.Config         // Configuration object
+		k   *kafka.Kafka           // Kafka Configuration
 	)
 
 	// Get configuration
@@ -42,9 +45,14 @@ func HTTP() error {
 		log.Fatalf("[DB] Failed to initialize database connection: %v", err)
 	}
 
+	k, err = kafka.New(cfg.Kafka.Username, cfg.Kafka.Password, cfg.Kafka.Brokers)
+	if err != nil {
+		log.Fatalf("[KAFKA] Failed to initialize kafka producer: %v", err)
+	}
+
 	// User domain initialization
 	ud = userData.New(db, fc)
-	us = userService.New(ud)
+	us = userService.New(ud, k)
 	uh = userHandler.New(us)
 
 	// Inject service used on handler
@@ -52,6 +60,7 @@ func HTTP() error {
 		User: uh,
 	}
 
+	go kConsumer.New(us, k, cfg.Kafka.Subscriptions)
 	// Error Handling
 	if err := s.Serve(cfg.Server.Port); err != http.ErrServerClosed {
 		return err

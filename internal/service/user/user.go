@@ -8,6 +8,7 @@ import (
 
 	userEntity "go-tutorial-2020/internal/entity/user"
 	"go-tutorial-2020/pkg/errors"
+	"go-tutorial-2020/pkg/kafka"
 )
 
 // UserData ...
@@ -19,17 +20,21 @@ type UserData interface {
 	GetMaxNIP(ctx context.Context) (int, error)
 	DeleteByNIP(ctx context.Context, nip string) error
 	SelectUser(ctx context.Context) ([]userEntity.User, error)
+	InsertFirebase(ctx context.Context, user userEntity.User) error
+	UpdateByNipFirebase(ctx context.Context, nip string, user userEntity.User) error
 }
 
 // Service ...
 type Service struct {
 	userData UserData
+	kafka    *kafka.Kafka
 }
 
 // New ...
-func New(userData UserData) Service {
+func New(userData UserData, kafka *kafka.Kafka) Service {
 	return Service{
 		userData: userData,
+		kafka:    kafka,
 	}
 }
 
@@ -90,10 +95,33 @@ func (s Service) DeleteByNIP(ctx context.Context, nip string) error {
 	return err
 }
 
+//SelectUser ...
 func (s Service) SelectUser(ctx context.Context) ([]userEntity.User, error) {
 	result, err := s.userData.SelectUser(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return result, err
+}
+
+//InsertFirebase ...
+func (s Service) InsertFirebase(ctx context.Context, user userEntity.User) error {
+
+	err := s.userData.InsertFirebase(ctx, user)
+	return err
+}
+
+//PublishFirebase ...
+func (s Service) PublishFirebase(user userEntity.User) error {
+	err := s.kafka.SendMessageJSON("New_User", user)
+	if err != nil {
+		return errors.Wrap(errors.New("PUBLISH GAGAL"), "[SERVICE][PublishUser]")
+	}
+	return err
+}
+
+//UpdateByNipFirebase ...
+func (s Service) UpdateByNipFirebase(ctx context.Context, nip string, user userEntity.User) error {
+	err := s.userData.UpdateByNipFirebase(ctx, nip, user)
+	return err
 }

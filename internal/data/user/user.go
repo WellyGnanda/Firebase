@@ -183,3 +183,21 @@ func (d Data) SelectUser(ctx context.Context) ([]userEntity.User, error) {
 	return sua, err
 
 }
+
+//InsertFirebase ...
+func (d Data) InsertFirebase(ctx context.Context, user userEntity.User) error {
+	_, err := d.c.Collection("user").Doc(user.Nip).Set(ctx, user)
+
+	return err
+}
+
+//UpdateByNipFirebase ...
+func (d Data) UpdateByNipFirebase(ctx context.Context, nip string, user userEntity.User) error {
+	iter, err := d.c.Collection("user").Doc(nip).Get(ctx)
+	userValidate := iter.Data()
+	if userValidate == nil {
+		return errors.Wrap(err, "Data Not Exist")
+	}
+	_, err = d.c.Collection("user").Doc(nip).Set(ctx, user)
+	return err
+}
