@@ -3,6 +3,7 @@ package skeleton
 import (
 	"context"
 	"log"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -22,6 +23,9 @@ type UserData interface {
 	SelectUser(ctx context.Context) ([]userEntity.User, error)
 	InsertFirebase(ctx context.Context, user userEntity.User) error
 	UpdateByNipFirebase(ctx context.Context, nip string, user userEntity.User) error
+	GetUserClient(ctx context.Context, header http.Header) ([]userEntity.User, error)
+	InsertUserClient(ctx context.Context, headers http.Header, user userEntity.User) error
+	DeleteUserByNipFirebase(ctx context.Context, nip string) error
 }
 
 // Service ...
@@ -123,5 +127,24 @@ func (s Service) PublishFirebase(user userEntity.User) error {
 //UpdateByNipFirebase ...
 func (s Service) UpdateByNipFirebase(ctx context.Context, nip string, user userEntity.User) error {
 	err := s.userData.UpdateByNipFirebase(ctx, nip, user)
+	return err
+}
+
+// DeleteUserByNipFirebase ...
+func (s Service) DeleteUserByNipFirebase(ctx context.Context, nip string) error {
+	err := s.userData.DeleteUserByNipFirebase(ctx, nip)
+	log.Println("asasasasasasa")
+	return err
+}
+
+// GetUserClient ...
+func (s Service) GetUserClient(ctx context.Context, headers http.Header) ([]userEntity.User, error) {
+	UserClient, err := s.userData.GetUserClient(ctx, headers)
+	return UserClient, err
+}
+
+// InsertUserClient ...
+func (s Service) InsertUserClient(ctx context.Context, headers http.Header, user userEntity.User) error {
+	err := s.userData.InsertUserClient(ctx, headers, user)
 	return err
 }

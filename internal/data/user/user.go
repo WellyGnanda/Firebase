@@ -4,10 +4,15 @@ import (
 	"context"
 	"log"
 
+	//"github.com/stretchr/testify/http"
+
 	"go-tutorial-2020/pkg/errors"
 	"go-tutorial-2020/pkg/firebaseclient"
+	"go-tutorial-2020/pkg/httpclient"
 
 	userEntity "go-tutorial-2020/internal/entity/user"
+
+	"net/http"
 
 	"cloud.google.com/go/firestore"
 	"github.com/jmoiron/sqlx"
@@ -17,9 +22,10 @@ import (
 type (
 	// Data ...
 	Data struct {
-		db   *sqlx.DB
-		stmt map[string]*sqlx.Stmt
-		c    *firestore.Client
+		db    *sqlx.DB
+		stmt  map[string]*sqlx.Stmt
+		c     *firestore.Client
+		httpc *httpclient.Client
 	}
 
 	// statement ...
@@ -61,10 +67,11 @@ var (
 )
 
 // New ...
-func New(db *sqlx.DB, fc *firebaseclient.Client) Data {
+func New(db *sqlx.DB, fc *firebaseclient.Client, httpc *httpclient.Client) Data {
 	d := Data{
-		db: db,
-		c:  fc.Client,
+		db:    db,
+		c:     fc.Client,
+		httpc: httpc,
 	}
 
 	d.initStmt()
@@ -199,5 +206,38 @@ func (d Data) UpdateByNipFirebase(ctx context.Context, nip string, user userEnti
 		return errors.Wrap(err, "Data Not Exist")
 	}
 	_, err = d.c.Collection("user").Doc(nip).Set(ctx, user)
+	return err
+}
+
+// GetUserClient ...
+func (d Data) GetUserClient(ctx context.Context, header http.Header) ([]userEntity.User, error) {
+	var resp userEntity.DataResp
+	var endpoint = "http://10.0.111.43:8888/" + "/users?firebasedb"
+
+	_, err := d.httpc.GetJSON(ctx, endpoint, header, &resp)
+	if err != nil {
+		return []userEntity.User{}, errors.Wrap(err, "[DATA][GetUser]")
+	}
+
+	return resp.Data, err
+}
+
+// InsertUserClient ...
+func (d Data) InsertUserClient(ctx context.Context, headers http.Header, user userEntity.User) error {
+	var resp userEntity.DataResp
+	var endpoint = "http://10.0.111.43:8888" + "/usersInsert?Insert=firebase"
+	_, err := d.httpc.PostJSON(ctx, endpoint, headers, user, &resp)
+	return err
+}
+
+// DeleteUserByNipFirebase ...
+func (d Data) DeleteUserByNipFirebase(ctx context.Context, nip string) error {
+	iter, err := d.c.Collection("user").Doc(nip).Get(ctx)
+	userValidate := iter.Data()
+	if userValidate == nil {
+		return errors.Wrap(err, "Data Not Exist")
+	}
+	log.Println("asasasasasasa")
+	_, err = d.c.Collection("user").Doc(nip).Delete(ctx)
 	return err
 }

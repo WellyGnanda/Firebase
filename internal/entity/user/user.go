@@ -13,3 +13,10 @@ type User struct {
 	Jabatan      string    `db:"jabatan" json:"jabatan"`
 	Email        string    `db:"email" json:"email"`
 }
+
+//DataResp Get Data Resp ...
+type DataResp struct {
+	Data     []User      `json:"data"`
+	Metadata interface{} `json:"metadata"`
+	Error    interface{} `json:"error"`
+}

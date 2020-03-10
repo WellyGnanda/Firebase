@@ -23,6 +23,9 @@ type IUserSvc interface {
 	InsertFirebase(ctx context.Context, user userEntity.User) error
 	PublishFirebase(user userEntity.User) error
 	UpdateByNipFirebase(ctx context.Context, nip string, user userEntity.User) error
+	GetUserClient(ctx context.Context, headers http.Header) ([]userEntity.User, error)
+	InsertUserClient(ctx context.Context, headers http.Header, user userEntity.User) error
+	DeleteUserByNipFirebase(ctx context.Context, nip string) error
 }
 
 type (
@@ -67,6 +70,8 @@ func (h *Handler) UserHandler(w http.ResponseWriter, r *http.Request) {
 			} else if _type == "getUserMySQL" {
 				// Ambil semua data user
 				result, err = h.userSvc.GetAllUsers(context.Background())
+			} else if _type == "GetUserClient" {
+				result, err = h.userSvc.GetUserClient(context.Background(), w.Header())
 
 			}
 		}
@@ -86,6 +91,8 @@ func (h *Handler) UserHandler(w http.ResponseWriter, r *http.Request) {
 
 			case "Publish":
 				err = h.userSvc.PublishFirebase(user)
+			case "PostApi":
+				err = h.userSvc.InsertUserClient(context.Background(), w.Header(), user)
 			}
 		}
 
@@ -96,11 +103,18 @@ func (h *Handler) UserHandler(w http.ResponseWriter, r *http.Request) {
 		} else {
 			err = h.userSvc.UpdateUser(context.Background(), user)
 		}
+
 	case http.MethodDelete:
-		if _, nipOK := r.URL.Query()["NIP"]; nipOK {
-			err = h.userSvc.DeleteByNIP(context.Background(), r.FormValue("NIP"))
-		} else {
-			err = errors.New("400")
+		if _, x := r.URL.Query()["typeDelete"]; x {
+			_typeDelete := r.FormValue("typeDelete")
+			switch _typeDelete {
+
+			case "NIP":
+				err = h.userSvc.DeleteByNIP(context.Background(), r.FormValue("NIP"))
+
+			case "NIPFirebase":
+				err = h.userSvc.DeleteUserByNipFirebase(context.Background(), r.FormValue("NIP"))
+			}
 		}
 	default:
 		err = errors.New("400")
