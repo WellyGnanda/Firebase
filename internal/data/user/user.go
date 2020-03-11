@@ -241,3 +241,51 @@ func (d Data) DeleteUserByNipFirebase(ctx context.Context, nip string) error {
 	_, err = d.c.Collection("user").Doc(nip).Delete(ctx)
 	return err
 }
+
+// GetUserPage ...
+func (d Data) GetUserPage(ctx context.Context, page int, size int, nip string) ([]userEntity.User, error) {
+	var (
+		su  userEntity.User
+		sua []userEntity.User
+		err error
+	)
+
+	if page == 1 {
+		iter := d.c.Collection("user").OrderBy("Nama", firestore.Asc).Limit(size).Documents(ctx)
+		for {
+			doc, err := iter.Next()
+			if err == iterator.Done {
+				break
+			}
+
+			if err != nil {
+				return sua, errors.Wrap(err, "[DATA][TampilanSemuaData] Failed to iterate Document!")
+			}
+			err = doc.DataTo(&su)
+			if err != nil {
+				return sua, errors.Wrap(err, "[DATA][TampilanSemuaData] Failed to Populate Struct!")
+			}
+			sua = append(sua, su)
+		}
+	} else {
+		doc, _ := d.c.Collection("user").Doc(nip).Get(ctx)
+		iter := d.c.Collection("user").OrderBy("Nama", firestore.Asc).StartAfter(doc.Data()["Nama"]).Limit(size).Documents(ctx)
+		for {
+			doc, err := iter.Next()
+			if err == iterator.Done {
+				break
+			}
+
+			if err != nil {
+				return sua, errors.Wrap(err, "[DATA][TampilanSemuaData] Failed to iterate Document!")
+			}
+			err = doc.DataTo(&su)
+			if err != nil {
+				return sua, errors.Wrap(err, "[DATA][TampilanSemuaData] Failed to Populate Struct!")
+			}
+			sua = append(sua, su)
+		}
+	}
+	return sua, err
+
+}

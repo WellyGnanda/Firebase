@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	userEntity "go-tutorial-2020/internal/entity/user"
@@ -26,6 +27,7 @@ type IUserSvc interface {
 	GetUserClient(ctx context.Context, headers http.Header) ([]userEntity.User, error)
 	InsertUserClient(ctx context.Context, headers http.Header, user userEntity.User) error
 	DeleteUserByNipFirebase(ctx context.Context, nip string) error
+	GetUserPage(ctx context.Context, page int, size int, nip string) ([]userEntity.User, error)
 }
 
 type (
@@ -51,7 +53,8 @@ func (h *Handler) UserHandler(w http.ResponseWriter, r *http.Request) {
 		err      error
 		errRes   response.Error
 		user     userEntity.User
-		_type    string
+		page     int
+		size     int
 		//sua      []userEntity.User
 	)
 	// Make new response object
@@ -63,16 +66,24 @@ func (h *Handler) UserHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	// Check if request method is GET
 	case http.MethodGet:
-		if _, x := r.URL.Query()["type"]; x {
-			_type = r.FormValue("type")
-			if _type == "getUserFirebase" {
-				result, err = h.userSvc.SelectUser(context.Background())
-			} else if _type == "getUserMySQL" {
-				// Ambil semua data user
-				result, err = h.userSvc.GetAllUsers(context.Background())
-			} else if _type == "GetUserClient" {
-				result, err = h.userSvc.GetUserClient(context.Background(), w.Header())
 
+		if _, x := r.URL.Query()["typeGet"]; x {
+			_typeGet := r.FormValue("typeGet")
+			switch _typeGet {
+
+			case "getUserFirebase":
+				result, err = h.userSvc.SelectUser(context.Background())
+
+			case "getUserMySQL":
+				result, err = h.userSvc.GetAllUsers(context.Background())
+
+			case "getUserClient":
+				result, err = h.userSvc.GetUserClient(context.Background(), r.Header)
+
+			case "getUserPage":
+				page, err = strconv.Atoi(r.FormValue("page"))
+				size, err = strconv.Atoi(r.FormValue("size"))
+				result, err = h.userSvc.GetUserPage(context.Background(), page, size, r.FormValue("NIP"))
 			}
 		}
 
@@ -91,8 +102,9 @@ func (h *Handler) UserHandler(w http.ResponseWriter, r *http.Request) {
 
 			case "Publish":
 				err = h.userSvc.PublishFirebase(user)
+
 			case "PostApi":
-				err = h.userSvc.InsertUserClient(context.Background(), w.Header(), user)
+				err = h.userSvc.InsertUserClient(context.Background(), r.Header, user)
 			}
 		}
 
