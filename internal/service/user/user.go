@@ -26,7 +26,7 @@ type UserData interface {
 	GetUserClient(ctx context.Context, header http.Header) ([]userEntity.User, error)
 	InsertUserClient(ctx context.Context, headers http.Header, user userEntity.User) error
 	DeleteUserByNipFirebase(ctx context.Context, nip string) error
-	GetUserPage(ctx context.Context, page int, size int, nip string) ([]userEntity.User, error)
+	GetUserPage(ctx context.Context, page int, length int) ([]userEntity.User, error)
 }
 
 // Service ...
@@ -150,7 +150,7 @@ func (s Service) InsertUserClient(ctx context.Context, headers http.Header, user
 }
 
 // GetUserPage ...
-func (s Service) GetUserPage(ctx context.Context, page int, size int, nip string) ([]userEntity.User, error) {
-	userList, err := s.userData.GetUserPage(ctx, page, size, nip)
+func (s Service) GetUserPage(ctx context.Context, page int, length int) ([]userEntity.User, error) {
+	userList, err := s.userData.GetUserPage(ctx, page, length)
 	return userList, err
 }

@@ -27,7 +27,7 @@ type IUserSvc interface {
 	GetUserClient(ctx context.Context, headers http.Header) ([]userEntity.User, error)
 	InsertUserClient(ctx context.Context, headers http.Header, user userEntity.User) error
 	DeleteUserByNipFirebase(ctx context.Context, nip string) error
-	GetUserPage(ctx context.Context, page int, size int, nip string) ([]userEntity.User, error)
+	GetUserPage(ctx context.Context, page int, length int) ([]userEntity.User, error)
 }
 
 type (
@@ -54,7 +54,7 @@ func (h *Handler) UserHandler(w http.ResponseWriter, r *http.Request) {
 		errRes   response.Error
 		user     userEntity.User
 		page     int
-		size     int
+		length   int
 		//sua      []userEntity.User
 	)
 	// Make new response object
@@ -82,8 +82,8 @@ func (h *Handler) UserHandler(w http.ResponseWriter, r *http.Request) {
 
 			case "getUserPage":
 				page, err = strconv.Atoi(r.FormValue("page"))
-				size, err = strconv.Atoi(r.FormValue("size"))
-				result, err = h.userSvc.GetUserPage(context.Background(), page, size, r.FormValue("NIP"))
+				length, err = strconv.Atoi(r.FormValue("length"))
+				result, err = h.userSvc.GetUserPage(context.Background(), page, length)
 			}
 		}
 

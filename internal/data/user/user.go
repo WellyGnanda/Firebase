@@ -243,49 +243,48 @@ func (d Data) DeleteUserByNipFirebase(ctx context.Context, nip string) error {
 }
 
 // GetUserPage ...
-func (d Data) GetUserPage(ctx context.Context, page int, size int, nip string) ([]userEntity.User, error) {
+func (d Data) GetUserPage(ctx context.Context, page int, length int) ([]userEntity.User, error) {
 	var (
-		su  userEntity.User
-		sua []userEntity.User
-		err error
+		su      userEntity.User
+		sua     []userEntity.User
+		iter    *firestore.DocumentIterator
+		lastDoc *firestore.DocumentSnapshot
+		err     error
 	)
 
 	if page == 1 {
-		iter := d.c.Collection("user").OrderBy("Nama", firestore.Asc).Limit(size).Documents(ctx)
-		for {
-			doc, err := iter.Next()
-			if err == iterator.Done {
-				break
-			}
-
-			if err != nil {
-				return sua, errors.Wrap(err, "[DATA][TampilanSemuaData] Failed to iterate Document!")
-			}
-			err = doc.DataTo(&su)
-			if err != nil {
-				return sua, errors.Wrap(err, "[DATA][TampilanSemuaData] Failed to Populate Struct!")
-			}
-			sua = append(sua, su)
-		}
+		// Kalau page 1 ambil data langsung dari query
+		iter = d.c.Collection("user").Limit(length).Documents(ctx)
 	} else {
-		doc, _ := d.c.Collection("user").Doc(nip).Get(ctx)
-		iter := d.c.Collection("user").OrderBy("Nama", firestore.Asc).StartAfter(doc.Data()["Nama"]).Limit(size).Documents(ctx)
-		for {
-			doc, err := iter.Next()
-			if err == iterator.Done {
-				break
-			}
-
-			if err != nil {
-				return sua, errors.Wrap(err, "[DATA][TampilanSemuaData] Failed to iterate Document!")
-			}
-			err = doc.DataTo(&su)
-			if err != nil {
-				return sua, errors.Wrap(err, "[DATA][TampilanSemuaData] Failed to Populate Struct!")
-			}
-			sua = append(sua, su)
+		// Kalau page > 1 ambil data sampai page sebelumnya
+		previous := d.c.Collection("user").Limit((page - 1) * length).Documents(ctx)
+		docs, err := previous.GetAll()
+		if err != nil {
+			return nil, err
 		}
+		// Ambil doc terakhir
+		lastDoc = docs[len(docs)-1]
+		// Query mulai setelah doc terakhir
+		iter = d.c.Collection("user").StartAfter(lastDoc).Limit(length).Documents(ctx)
 	}
+
+	// Looping documents
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+
+		if err != nil {
+			return sua, errors.Wrap(err, "[DATA][GetUserPage] Failed to iterate Document!")
+		}
+		err = doc.DataTo(&su)
+		if err != nil {
+			return sua, errors.Wrap(err, "[DATA][GetUserPage] Failed to Populate Struct!")
+		}
+		sua = append(sua, su)
+	}
+
 	return sua, err
 
 }
