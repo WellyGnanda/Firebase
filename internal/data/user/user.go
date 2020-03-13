@@ -237,7 +237,7 @@ func (d Data) DeleteUserByNipFirebase(ctx context.Context, nip string) error {
 	if userValidate == nil {
 		return errors.Wrap(err, "Data Not Exist")
 	}
-	log.Println("asasasasasasa")
+
 	_, err = d.c.Collection("user").Doc(nip).Delete(ctx)
 	return err
 }
